@@ -6,7 +6,7 @@
 |-----|---------|------|
 | Introduction | ✅ | [简介](https://github.com/DezineLeo/elm-lang-docs-zh/tree/master/docs/guide#%E7%AE%80%E4%BB%8B) |
 | Install | ✅ | [安装](https://github.com/DezineLeo/elm-lang-docs-zh/tree/master/docs/guide#%E5%AE%89%E8%A3%85) |
-| Core Language | 👨🏻‍💻 |  |
+| Core Language | ✅ | [语言核心](https://github.com/DezineLeo/elm-lang-docs-zh/tree/master/docs/guide#%E8%AF%AD%E8%A8%80%E6%A0%B8%E5%BF%83) |
 | The Elm Architecture | 👨🏻‍💻 |  |
 | Types | 👨🏻‍💻 |  |
 | Error Handling | 👨🏻‍💻 |  |
@@ -16,3 +16,8 @@
 | Optimization | 👨🏻‍💻 |  |
 | Next Steps | 👨🏻‍💻 |  |
 | Appendix | 👨🏻‍💻 |  |
+
+## 其他学习资料
+
++ [Learn Elm](https://github.com/dwyl/learn-elm)
++ [Beginning Elm](https://elmprogramming.com/)
