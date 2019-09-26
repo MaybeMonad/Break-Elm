@@ -7,6 +7,6 @@ module.exports = {
       { text: '文档', link: '/guide/' },
       { text: '官方', link: 'https://elm-lang.org' },
     ],
+    displayAllHeaders: true // 默认值：false
   },
-  displayAllHeaders: true // 默认值：false
 }
