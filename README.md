@@ -7,7 +7,7 @@
 | Introduction | ✅ | [简介](https://github.com/DezineLeo/elm-lang-docs-zh/tree/master/docs/guide#%E7%AE%80%E4%BB%8B) | 2019.09.25 |
 | Install | ✅ | [安装](https://github.com/DezineLeo/elm-lang-docs-zh/tree/master/docs/guide#%E5%AE%89%E8%A3%85) | 2019.09.26 |
 | Core Language | ✅ | [语言核心](https://github.com/DezineLeo/elm-lang-docs-zh/tree/master/docs/guide#%E8%AF%AD%E8%A8%80%E6%A0%B8%E5%BF%83) | 2019.09.26 |
-| The Elm Architecture | ✅ | [Elm 架构](https://github.com/DezineLeo/elm-lang-docs-zh/tree/master/docs/guide#elm-%E6%9E%B6%E6%9E%84) |  |
+| The Elm Architecture | ✅ | [Elm 架构](https://github.com/DezineLeo/elm-lang-docs-zh/tree/master/docs/guide#elm-%E6%9E%B6%E6%9E%84) | 2019.09.28 |
 | Types | 👨🏻‍💻 |  |  |
 | Error Handling | 👨🏻‍💻 |  |  |
 | Commands and Subscriptions | 👨🏻‍💻 |  |  |
