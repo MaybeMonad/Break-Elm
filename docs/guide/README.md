@@ -691,3 +691,174 @@ Change : String -> Msg
 ### 表单
 
 前往[在线编辑器示例](https://elm-lang.org/examples/forms)
+
+现在我们要做一个包含 name、password 和 passwordAgain 三个字段的基础表单，需要校验两个密码是否一致，放心，这对 Elm 来说很简单。
+
+这次的代码会更长更复杂些，建议先通览一遍再阅读剖析。
+
+```elm
+import Browser
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (onInput)
+
+
+
+-- MAIN
+
+
+main =
+  Browser.sandbox { init = init, update = update, view = view }
+
+
+
+-- MODEL
+
+
+type alias Model =
+  { name : String
+  , password : String
+  , passwordAgain : String
+  }
+
+
+init : Model
+init =
+  Model "" "" ""
+
+
+
+-- UPDATE
+
+
+type Msg
+  = Name String
+  | Password String
+  | PasswordAgain String
+
+
+update : Msg -> Model -> Model
+update msg model =
+  case msg of
+    Name name ->
+      { model | name = name }
+
+    Password password ->
+      { model | password = password }
+
+    PasswordAgain password ->
+      { model | passwordAgain = password }
+
+
+
+-- VIEW
+
+
+view : Model -> Html Msg
+view model =
+  div []
+    [ viewInput "text" "Name" model.name Name
+    , viewInput "password" "Password" model.password Password
+    , viewInput "password" "Re-enter Password" model.passwordAgain PasswordAgain
+    , viewValidation model
+    ]
+
+
+viewInput : String -> String -> String -> (String -> msg) -> Html msg
+viewInput t p v toMsg =
+  input [ type_ t, placeholder p, value v, onInput toMsg ] []
+
+
+viewValidation : Model -> Html msg
+viewValidation model =
+  if model.password == model.passwordAgain then
+    div [ style "color" "green" ] [ text "OK" ]
+  else
+    div [ style "color" "red" ] [ text "Passwords do not match!" ]
+```
+
+与之前[文本输入框](/guide/#文本输入框)中的代码很接近，只是多了几个字段，让我们来看看它是如何构建的。
+
+同样，我们先预估 Model 中包含的状态值，之前我们也提了有三个字段：
+
+```elm
+type alias Model =
+  { name : String
+  , password : String
+  , passwordAgain : String
+  }
+```
+
+看上去不错，这三个字段都可以更改，因此我们可以定义消息种类为：
+
+```elm
+type Msg
+  = Name String
+  | Password String
+  | PasswordAgain String
+```
+
+很明显，`update` 函数只需要机械处理每一种消息对应的情况：
+
+```elm
+update : Msg -> Model -> Model
+update msg model =
+  case msg of
+    Name name ->
+      { model | name = name }
+
+    Password password ->
+      { model | password = password }
+
+    PasswordAgain password ->
+      { model | passwordAgain = password }
+```
+
+再看看这次的 `view` 好像比之前的要高级些：
+
+```elm
+view : Model -> Html Msg
+view model =
+  div []
+    [ viewInput "text" "Name" model.name Name
+    , viewInput "password" "Password" model.password Password
+    , viewInput "password" "Re-enter Password" model.passwordAgain PasswordAgain
+    , viewValidation model
+    ]
+```
+
+首先，我们创建一个带了四个子节点的 `div`，但相比于之前那样直接调用 `elm/html` 中的函数，我们构建一个 `viewInput` 函数来让代码看上去更简洁：
+
+```elm
+viewInput : String -> String -> String -> (String -> msg) -> Html msg
+viewInput t p v toMsg =
+  input [ type_ t, placeholder p, value v, onInput toMsg ] []
+```
+
+`viewInput "text" "Name" model.name Name` （译者注：这个结构让我想起了 Pug 中的 Mixin）会创建一个类似 `<input type="text" placeholder="Name" value="Bill">` 的节点，同时会根据用户输入发送类似 `Name "Billy"` 的消息给 `update` 函数。
+
+最有意思的是第四个子节点，它对应的是 `viewValidation`：
+
+```elm
+viewValidation : Model -> Html msg
+viewValidation model =
+  if model.password == model.passwordAgain then
+    div [ style "color" "green" ] [ text "OK" ]
+  else
+    div [ style "color" "red" ] [ text "Passwords do not match!" ]
+```
+
+它首先会比较两个密码，如果匹配，就会显示绿色的正确提示，反之则显示红色的错误提示。
+
+这些辅助函数已经开始显现出将 HTML 转化为 Elm 编码的好处。我们当然可以将所有代码都放入 `view` 中，但在 Elm 中，构建辅助函数是再正常不过。有点感觉到困惑？也许我可
+
+> **练习**：`viewValidation` 的优势在于它很容易扩展，当你在阅读本文档过程中开始尝试这些代码时（你就应该这么做），可以：
+> 
+> + 检查密码长度是否大于 8 个字符
+> + 确保密码包含大写，小写和数字字符
+> + 添加一个额外的字段比如 age 并检查其是否为数字
+> + 添加一个提交按钮，按下后仅提示错误信息
+> 
+> 在你尝试以上情况时，请确保使用 [String](https://package.elm-lang.org/packages/elm/core/latest/String) 模块中的辅助函数！同样，在和服务器通信前，我们还需要了解更多信息，确保已通读 HTTP 部分，因为恰当的指导能让你少走弯路。
+> 
+> **注意**：花大力气构建的通用校验库似乎都不太理想。我认为问题在于，校验通常最好是使用常用的 Elm 函数，通过获取一些参数，然后输出 `Bool` 或 `Maybe`。比如，为何要使用一个库来检查两个字符串是否相同？因此，就目前所知，最精简的代码来自为特定方案编写逻辑而无需掺杂任何其他的功能。所以，当你需要更复杂的库或代码前，先动手尝试一下最基本的方法。
