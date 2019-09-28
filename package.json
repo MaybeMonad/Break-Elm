@@ -1,6 +1,14 @@
 {
+  "name": "elm-lang-doc-zh",
   "scripts": {
     "docs:dev": "vuepress dev docs",
     "docs:build": "vuepress build docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DezineLeo/elm-lang-docs-zh"
+  },
+  "dependencies": {
+    "vuepress": "^1.1.0"
   }
 }
