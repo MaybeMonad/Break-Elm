@@ -38,6 +38,11 @@ module.exports = {
         path: '/guide/the-elm-architecture',
         collapsable: false,
       },
+      {
+        title: '类型',
+        path: '/guide/types',
+        collapsable: false,
+      },
     ],
     sidebarDepth: 1,
   },
