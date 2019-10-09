@@ -210,3 +210,135 @@ checkPower powerLevel =
 + `compappend` 允许 `String` 和 `List comparable`
 
 这些约束类型变量的存在使得像 `(+)` 和 `(<)` 这样的运算符在使用上更灵活了。
+
+## 类型别名
+
+Elm 允许你创建**类型别名**，别名是其他一些类型的简称，就像下面：
+
+```elm
+type alias User =
+  { name : String
+  , age : Int
+  }
+```
+
+这样一来，我们就不必一直输入这个 record 类型，我们可以用 `User` 代替。比如，你可以简写类型注释：
+
+```elm
+isOldEnoughToVote : User -> Bool
+isOldEnoughToVote user =
+  user.age >= 18
+
+-- The following type annotations are equivalent:
+--
+--     isOldEnoughToVote : User -> Bool
+--     isOldEnoughToVote : { name : String, age : Int } -> Bool
+--
+```
+
+我们做的就是给一个较长的类型创建别名，类型别名有助于我们编写更短、更清晰的类型注释。随着应用程序的迭代发展，这一点变得更加重要。假设我们有一个 `celebrateBirthday` 函数：
+
+```elm
+celebrateBirthday : User -> User
+celebrateBirthday user =
+  { user | age = user.age + 1 }
+
+-- The following type annotations are equivalent:
+--
+--     celebrateBirthday : User -> User
+--     celebrateBirthday : { name : String, age : Int } -> { name : String, age : Int }
+--
+```
+
+使用类型别名后阅读起来更清晰，但这只是包含两个字段的 record，试想如果随着程序迭代，我们需要添加更多字段时，我们可以在 `User` 中添加 10 或者 100 个字段，而无需对 `celebrateBirthday` 函数进行任何更改，很棒对吧！
+
+### Record 构造函数
+
+当你创建专门用于 record 的类型别名时，它还会生成一个 **record 构造函数**，因此当我们定义一个 `User` 类型别名时，就可以像下面这样更改 record：
+
+```sh
+> type alias User = { name : String, age : Int }
+
+> User
+<function> : String -> Int -> User
+
+> User "Sue" 58
+{ name = "Sue", age = 58 } : User
+
+> User "Tom" 31
+{ name = "Tom", age = 31 } : User
+```
+
+现在你可以尝试创建一个自己的类型别名了！
+
+记住，record 构造函数的参数顺序与类型别名的字段顺序必须保持一致！
+
+另外，这仅限 record，为其他类型创建别名时不会生成构造函数。
+
+## 自定义类型
+
+::: tip
+注意：自定义类型以往在 Elm 中成为“联合类型”，来自其他社区的名称包括 [tagged union](https://en.wikipedia.org/wiki/Tagged_union) 和 [ADTs](https://en.wikipedia.org/wiki/Algebraic_data_type)
+:::
+
+到目前为止，我们已经见了不少类型，如 `Bool`、`Int` 和 `String`，那么如何自定义我们自己的类型呢？
+
+假如我们要编写一个聊天室程序，那每个人就需要一个名字，但有的用户可能没有注册永久账号，他们在每次出现时都会给出一个名字。
+
+我们可以通过定义一个 `UserStatus` 类型并列出所有可能的情况来描述即可：
+
+```elm
+type UserStatus = Regular | Visitor
+```
+
+这个 `UserStatus` 拥有两个变量，某人可能是 `Regular` 或 `Visitor`，那我们就可以将用户表示为这样的 record：
+
+```elm
+type UserStatus
+  = Regular
+  | Visitor
+
+type alias User =
+  { status : UserStatus
+  , name : String
+  }
+
+thomas = { status = Regular, name = "Thomas" }
+kate95 = { status = Visitor, name = "kate95" }
+```
+
+现在我们就可以追溯一个人是注册账户（Regular）还是访问账户（Visitor），这看上去不难，但我们可以让它更简单些。
+
+除了创建自定义类型和类型别名外，我们还可以只用一个自定义类型来表示。`Regular` 和 `Visitor` 两个变量都有对应的数据，在这里对应的就是一个 String：
+
+```elm
+type User
+  = Regular String
+  | Visitor String
+
+thomas = Regular "Thomas"
+kate95 = Visitor "kate95"
+```
+
+现在数据直接赋值给了变量，因此不再需要 record。
+
+这种方法的另一个好处是每个变量都可以拥有不同的数据。假设 `Regular` 用户注册时给出了年龄，我们没有很好的办法用 record 去记录，但用自定义类型就没问题，现在让我们来给 `Regular` 变量添加一些数据：
+
+```sh
+> type User
+|   = Regular String Int
+|   | Visitor String
+| 
+
+> Regular
+<function> : String -> Int -> User
+
+> Visitor
+<function> : String -> User
+
+> Regular "Thomas" 44
+Regular "Thomas" 44 : User
+
+> Visitor "kate95"
+Visitor "Thomas" : User
+```
