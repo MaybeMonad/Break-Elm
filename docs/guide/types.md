@@ -283,7 +283,7 @@ celebrateBirthday user =
 
 到目前为止，我们已经见了不少类型，如 `Bool`、`Int` 和 `String`，那么如何自定义我们自己的类型呢？
 
-假如我们要编写一个聊天室程序，那每个人就需要一个名字，但有的用户可能没有注册永久账号，他们在每次出现时都会给出一个名字。
+假如我们要编写一个聊天室程序，那每个人就需要一个名字，但有的用户可能没有注册永久账号，他们只在每次出现时给出一个名字。
 
 我们可以通过定义一个 `UserStatus` 类型并列出所有可能的情况来描述即可：
 
@@ -291,7 +291,7 @@ celebrateBirthday user =
 type UserStatus = Regular | Visitor
 ```
 
-这个 `UserStatus` 拥有两个变量，某人可能是 `Regular` 或 `Visitor`，那我们就可以将用户表示为这样的 record：
+`UserStatus` 拥有两个变量，即某人可能是 `Regular` 或 `Visitor`。我们可以用 record 来表示用户：
 
 ```elm
 type UserStatus
@@ -342,3 +342,100 @@ Regular "Thomas" 44 : User
 > Visitor "kate95"
 Visitor "Thomas" : User
 ```
+
+你可以尝试用名字和年龄创建一个 `Regular` 用户。
+
+我们现在还只是添加了一个年龄的变量，而一个类型的变量可以有很大的不同。例如，当我们想为 `Regular` 用户添加位置，以便于建立局域聊天室，只需添加更多关联数据！或者当我们想拥有匿名用户，只需添加第三个变量 `Anonymous`，最后我们就会得到：
+
+```elm
+type User
+  = Regular String Int Location
+  | Visitor String
+  | Anonymous
+```
+
+看上去不错！我们再来看看别的示例。
+
+### Message 消息
+
+在 [Elm 架构](/guide/the-elm-architecture)部分，我们看到一些例子中定义了 `Msg` 类型。这种类型在 Elm 中极为常见，比如在聊天室程序中，我们可以这么定义：
+
+```elm
+type Msg
+  = PressedEnter
+  | ChangedDraft String
+  | ReceivedMessage { user : User, message : String }
+  | ClickedExit
+```
+
+这里的 `Msg` 对应四个不同的变量，一些变量没有关联数据，另一些则有很多。注意 `ReceivedMessage` 用了一个 record 作为关联数据，这没问题，任何类型都能作为关联数据。这样，你就可以非常准确地描述应用程序中的交互逻辑。
+
+### 建模
+
+当你能对不同情况准确建模时，自定义类型将变得非常强大。例如，当你在等待数据加载时，则可以用以下自定义类型来描述：
+
+```elm
+type Profile
+  = Failure
+  | Loading
+  | Success { name : String, description : String }
+```
+
+这样，你可以从 `Loading` 状态开始，然后根据不同情况过渡到 `Failure` 或 `Success`。这使得编写一个在数据加载时始终显示合理内容的 `view` 函数非常容易。
+
+现在我们知道了如何创建自定义类型，下一节我们将展示如何使用它们！
+
+::: tip
+<b>注意：自定义类型是 Elm 中最重要的功能。</b>它们很多深入的使用，尤其当你习惯了对场景精细化建模时。我尝试在附录的“以集合理解类型”和“以位理解类型”中分享了一些深度知识，希望能帮助你理解。
+:::
+
+## 模式匹配
+
+在上一节中，我们学习了用 `type` 关键字创建自定义类型。我们的主要示例是聊天室中的 `User`：
+
+```elm
+type User
+  = Regular String Int
+  | Visitor String
+```
+
+即注册用户有名字和年龄，而访客只有名字，那实际上我们该如何使用这个自定义类型呢？
+
+### `Case`
+
+假设我们要用一个 `toName` 函数来显示 `User` 的名字，可以用以下的 `case` 表达式：
+
+```elm
+toName : User -> String
+toName user =
+  case user of
+    Regular name age ->
+      name
+
+    Visitor name ->
+      name
+
+-- toName (Regular "Thomas" 44) == "Thomas"
+-- toName (Visitor "kate95")    == "kate95"
+```
+
+该 `case` 表达式使我们能根据具体变量来分支处理，因而无论遇到的是 Thomas 还是 Kate，我们始终能知道如何显示其名字。
+
+另外，如果我们使用像 `toName (Visitor "kate95" 44)`（译者注：该出的原文是 `toName (Visitor "kate95")`，是有效的）或者 `toName Anonymous` 这样的无效参数，编译器会立刻告诉我们。这也就意味着简单的错误可以在几秒钟内解决，而不会等到暴露在用户面前而花大量时间去修复。
+
+### 通配符
+
+我们刚定义的 `toName` 函数很好用，但你有没有注意到我们没用到 `age` 这个参数？当某些关联数据未使用时，通常使用“通配符”而无需为其具名：
+
+```elm
+toName : User -> String
+toName user =
+  case user of
+    Regular name _ ->
+      name
+
+    Visitor name ->
+      name
+```
+
+`_` 告诉我们这里存在有数据但未使用。
