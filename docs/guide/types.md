@@ -291,7 +291,7 @@ celebrateBirthday user =
 type UserStatus = Regular | Visitor
 ```
 
-`UserStatus` 拥有两个变量，即某人可能是 `Regular` 或 `Visitor`。我们可以用 record 来表示用户：
+`UserStatus` 有两个不定类型（Variant），即某人可能是 `Regular` 或 `Visitor`。我们可以用 record 来表示用户：
 
 ```elm
 type UserStatus
@@ -309,7 +309,7 @@ kate95 = { status = Visitor, name = "kate95" }
 
 现在我们就可以追溯一个人是注册账户（Regular）还是访问账户（Visitor），这看上去不难，但我们可以让它更简单些。
 
-除了创建自定义类型和类型别名外，我们还可以只用一个自定义类型来表示。`Regular` 和 `Visitor` 两个变量都有对应的数据，在这里对应的就是一个 String：
+除了创建自定义类型和类型别名外，我们还可以只用一个自定义类型来表示。因为 `Regular` 和 `Visitor` 两个不定类型都有对应的数据，而恰好对应的都是一个字符串：
 
 ```elm
 type User
@@ -320,9 +320,9 @@ thomas = Regular "Thomas"
 kate95 = Visitor "kate95"
 ```
 
-现在数据直接赋值给了变量，因此不再需要 record。
+现在数据直接赋值给了 Variant，因此不再需要 Record。
 
-这种方法的另一个好处是每个变量都可以拥有不同的数据。假设 `Regular` 用户注册时给出了年龄，我们没有很好的办法用 record 去记录，但用自定义类型就没问题，现在让我们来给 `Regular` 变量添加一些数据：
+这种方法的另一个好处是每个变量都可以拥有不同的数据。假设 `Regular` 用户注册时给出了年龄，我们没有很好的办法用 Record 去记录，但用自定义类型就没问题，现在让我们来给 `Regular` 添加一些数据：
 
 ```sh
 > type User
@@ -345,7 +345,7 @@ Visitor "Thomas" : User
 
 你可以尝试用名字和年龄创建一个 `Regular` 用户。
 
-我们现在还只是添加了一个年龄的变量，而一个类型的变量可以有很大的不同。例如，当我们想为 `Regular` 用户添加位置，以便于建立局域聊天室，只需添加更多关联数据！或者当我们想拥有匿名用户，只需添加第三个变量 `Anonymous`，最后我们就会得到：
+我们现在还只是添加了一个年龄的变量，而一个不定类型的变量可以有很大的不同。例如，当我们想为 `Regular` 用户添加位置，以便于建立局域聊天室，只需添加更多关联数据！或者当我们想拥有匿名用户，只需添加第三个变量 `Anonymous`，最后我们就会得到：
 
 ```elm
 type User
@@ -368,7 +368,7 @@ type Msg
   | ClickedExit
 ```
 
-这里的 `Msg` 对应四个不同的变量，一些变量没有关联数据，另一些则有很多。注意 `ReceivedMessage` 用了一个 record 作为关联数据，这没问题，任何类型都能作为关联数据。这样，你就可以非常准确地描述应用程序中的交互逻辑。
+这里的 `Msg` 对应四个不同的不定类型，其中一些没有关联数据，另一些则有很多。注意 `ReceivedMessage` 用了一个 Record 作为关联数据，这没问题，任何类型都能作为关联数据。这样，你就可以非常准确地描述应用程序中的交互逻辑。
 
 ### 建模
 
@@ -419,7 +419,7 @@ toName user =
 -- toName (Visitor "kate95")    == "kate95"
 ```
 
-该 `case` 表达式使我们能根据具体变量来分支处理，因而无论遇到的是 Thomas 还是 Kate，我们始终能知道如何显示其名字。
+该 `case` 表达式使我们能根据具体情况来分支处理，因而无论遇到的是 Thomas 还是 Kate，我们始终能知道如何显示其名字。
 
 另外，如果我们使用像 `toName (Visitor "kate95" 44)`（译者注：该出的原文是 `toName (Visitor "kate95")`，是有效的）或者 `toName Anonymous` 这样的无效参数，编译器会立刻告诉我们。这也就意味着简单的错误可以在几秒钟内解决，而不会等到暴露在用户面前而花大量时间去修复。
 

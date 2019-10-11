@@ -10,8 +10,8 @@ module.exports = {
     displayAllHeaders: true,
     repo: 'https://github.com/DezineLeo/elm-lang-docs-zh',
     repoLabel: 'GitHub Repo',
-    editLinks: true,
-    editLinkText: '在 GitHub 上编辑此页',
+    // editLinks: true,
+    // editLinkText: '在 GitHub 上编辑此页',
     sidebar: [
       {
         title: '关于本文档',
@@ -41,6 +41,11 @@ module.exports = {
       {
         title: '类型',
         path: '/guide/types',
+        collapsable: false,
+      },
+      {
+        title: '错误处理',
+        path: '/guide/error-handling',
         collapsable: false,
       },
     ],
