@@ -9,7 +9,7 @@
 | Core Language | ✅ | [语言核心](/docs/guide/core-language.md) | 2019.09.26 |
 | The Elm Architecture | ✅ | [Elm 架构](/docs/guide/the-elm-architecture.md) | 2019.09.28 |
 | Types | ✅ | [类型](/docs/guide/types.md) | 2019.10.10 |
-| Error Handling | 👨🏻‍💻 |  |  |
+| Error Handling | ✅ | [错误处理](/docs/guide/error-handling.md) | 2019.10.12 |
 | Commands and Subscriptions | 👨🏻‍💻 |  |  |
 | JavaScript Interop | 👨🏻‍💻 |  |  |
 | Web Apps | 👨🏻‍💻 |  |  |
