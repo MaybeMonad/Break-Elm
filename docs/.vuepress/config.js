@@ -48,6 +48,11 @@ module.exports = {
         path: '/guide/error-handling',
         collapsable: false,
       },
+      {
+        title: '命令和订阅',
+        path: '/guide/effects',
+        collapsable: false,
+      },
     ],
     sidebarDepth: 1,
   },
