@@ -221,3 +221,470 @@ update msg model =
 ![element](/element.svg)
 
 我们可以从 `init` 和 `update` 函数发布**命令**，这使我们能在需要时执行诸如发起 HTTP 请求的操作。我们还可以**订阅**有趣的信息（稍后我们将看到一个订阅示例）。
+
+## JSON
+
+前往[在线编辑器示例](https://elm-lang.org/examples/cat-gifs)
+
+我们刚刚已经看了一个使用 HTTP 获取书籍内容的示例，而大部分服务器都以一种称为 JavaScript Object Notation（JSON）的特殊格式返回数据。
+
+因此，我们的下一个示例展示了如何获取一些 JSON 数据，从而允许我们按下按钮后显示随机的喵 GIF 图。
+
+```elm
+import Browser
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
+import Http
+import Json.Decode exposing (Decoder, field, string)
+
+
+
+-- MAIN
+
+
+main =
+  Browser.element
+    { init = init
+    , update = update
+    , subscriptions = subscriptions
+    , view = view
+    }
+
+
+
+-- MODEL
+
+
+type Model
+  = Failure
+  | Loading
+  | Success String
+
+
+init : () -> (Model, Cmd Msg)
+init _ =
+  (Loading, getRandomCatGif)
+
+
+
+-- UPDATE
+
+
+type Msg
+  = MorePlease
+  | GotGif (Result Http.Error String)
+
+
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model =
+  case msg of
+    MorePlease ->
+      (Loading, getRandomCatGif)
+
+    GotGif result ->
+      case result of
+        Ok url ->
+          (Success url, Cmd.none)
+
+        Err _ ->
+          (Failure, Cmd.none)
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  Sub.none
+
+
+
+-- VIEW
+
+
+view : Model -> Html Msg
+view model =
+  div []
+    [ h2 [] [ text "Random Cats" ]
+    , viewGif model
+    ]
+
+
+viewGif : Model -> Html Msg
+viewGif model =
+  case model of
+    Failure ->
+      div []
+        [ text "I could not load a random cat for some reason. "
+        , button [ onClick MorePlease ] [ text "Try Again!" ]
+        ]
+
+    Loading ->
+      text "Loading..."
+
+    Success url ->
+      div []
+        [ button [ onClick MorePlease, style "display" "block" ] [ text "More Please!" ]
+        , img [ src url ] []
+        ]
+
+
+
+-- HTTP
+
+
+getRandomCatGif : Cmd Msg
+getRandomCatGif =
+  Http.get
+    { url = "https://api.giphy.com/v1/gifs/random?api_key=dc6zaTOxFJmzC&tag=cat"
+    , expect = Http.expectJson GotGif gifDecoder
+    }
+
+
+gifDecoder : Decoder String
+gifDecoder =
+  field "data" (field "image_url" string)
+```
+
+该示例与上一个示例非常相似：
+
++ `init` 从 `Loading` 状态开始，紧跟着一个获取随机 GIF 图的命令。
++ 每当 `GotGif` 有新消息，`update` 就负责处理。同时，当有人按下按钮，`update` 就会处理 `MorePlease` 消息，并发出命令获取更多喵。
++ `view` 负责向你展示喵。
+
+主要的区别在于 `getRandomCatGif` 的定义，相比于 `Http.expectString`，我们这次改用 `Http.expectJson`，这是怎么回事呢？
+
+### JSON
+
+当你向 [`api.giphy.com`](https://api.giphy.com/v1/gifs/random?api_key=dc6zaTOxFJmzC&tag=cat) 请求一个随机喵的 GIF 图时，他们的服务器就会生成一个很大的 JSON 字符串，就像这样：
+
+```json
+{
+  "data": {
+    "type": "gif",
+    "id": "l2JhxfHWMBWuDMIpi",
+    "title": "cat love GIF by The Secret Life Of Pets",
+    "image_url": "https://media1.giphy.com/media/l2JhxfHWMBWuDMIpi/giphy.gif",
+    "caption": "",
+    ...
+  },
+  "meta": {
+    "status": 200,
+    "msg": "OK",
+    "response_id": "5b105e44316d3571456c18b3"
+  }
+}
+```
+
+我们无法保证此处提供的任何信息，因为服务器可以更改字段，并且在不同情况下这些字段可以有不同的类型，这真的是一个混乱无序的世界！
+
+在 JavaScript 中，方法仅是将 JSON 转换为 JS 对象，并祈祷不会出错。但如果其中有一些拼写错误或意外的数据呢，你的代码可能会在某个地方出现运行时错误，然后就要去查代码是否有错？数据是否有误？
+
+而在 Elm 中，我们先验证 JSON，然后再将其引入程序。因此，即便数据拥有意外的结构，我们也能立即获知，坏数据也无法流入导致运行时错误，而这都靠 JSON 解码器实现。
+
+### JSON 解码器
+
+假如我们有一些 JSON：
+
+```json
+{
+  "name": "Tom",
+  "age": 42
+}
+```
+
+我们需要通过 `Decoder` 来运行它获取特定信息。如果想获取 `age`，我们就要通过 `Decoder Int` 来运行获取：
+
+![int](/int.svg)
+
+如果一切顺利，我们就能在另一端获得一个 `Int`。如果需要获取 `name`，我们可以通过 `Decoder String` 来获取：
+
+![string](/string.svg)
+
+同样，如果没问题，我们就会在另一端获得 `String`。
+
+那我们如何创建像这样的解码器呢？
+
+### 构建模块
+
+[`elm/json`](https://package.elm-lang.org/packages/elm/json/latest/) 包为我们提供了 [`Json.Decoder`](https://package.elm-lang.org/packages/elm/json/latest/Json-Decode) 模块。它自带了很多小型解码器，我们可以充分利用它们。
+
+因此，若要获取 `{ "name": "Tom", "age": 42 }` 中的 `"age"`，我们可以创建这样一个解码器：
+
+```elm
+import Json.Decode exposing (Decoder, field, int)
+
+ageDecoder : Decoder Int
+ageDecoder =
+  field "age" int
+
+ -- int : Decoder Int
+ -- field : String -> Decoder a -> Decoder a
+```
+
+该 `field` 函数包含两个参数：
+
+1. `String` - 字段名称。我们需要获取 `age` 的值，因此填入 `"age"`。
+2. `Decoder a` - 执行下一步的解码器。如果 `age` 字段存在，就会执行该解码器。
+
+因此，组合起来就是 `field "age" int` 请求一个 `age` 字段，如果存在，它将运行 `Decoder Int` 尝试提取一个整数。
+
+同理我们可以提取 `name` 字段：
+
+```elm
+import Json.Decode exposing (Decoder, field, string)
+
+nameDecoder : Decoder String
+nameDecoder =
+  field "name" string
+
+-- string : Decoder String
+```
+
+### 嵌套解码器
+
+还记得 `api.giphy.com` 的数据吗？
+
+```json
+{
+  "data": {
+    "type": "gif",
+    "id": "l2JhxfHWMBWuDMIpi",
+    "title": "cat love GIF by The Secret Life Of Pets",
+    "image_url": "https://media1.giphy.com/media/l2JhxfHWMBWuDMIpi/giphy.gif",
+    "caption": "",
+    ...
+  },
+  "meta": {
+    "status": 200,
+    "msg": "OK",
+    "response_id": "5b105e44316d3571456c18b3"
+  }
+}
+```
+
+现在我们要访问 `response.data.image_url` 来显示随机 GIF 就有现成的工具了。
+
+```elm
+import Json.Decode exposing (Decoder, field, string)
+
+gifDecoder : Decoder String
+gifDecoder =
+  field "data" (field "image_url" string)
+```
+
+这就是我们在上面示例中 `gifDecoder` 的定义，而是否有 `data` 字段吗？该字段中是否有 `image_url` 值？该值是否为字符串类型？我们所有的期望都被明确写出，从而使我们能够安全地从 JSON 中提取 Elm 值。
+
+### 组合解码器
+
+这就是我们的 HTTP 示例所需要的，但是解码器还能做更多的事情！例如，如果我们需要*两个字段*怎么办？我们可以用 `map2` 组合不同的解码器：
+
+```elm
+map2 : (a -> b -> value) -> Decoder a -> Decoder b -> Decoder value
+```
+
+该函数有两个解码器，它会尝试两者并结合其结果。现在我们可以将另个解码器放在一起：
+
+```elm
+import Json.Decode exposing (Decoder, map2, field, string, int)
+
+type alias Person =
+  { name : String
+  , age : Int
+  }
+
+personDecoder : Decoder Person
+personDecoder =
+  map2 Person
+      (field "name" string)
+      (field "age" int)
+```
+
+如果用 `personDecoder` 解析 `{ "name": "Tom", "age": 42 }` 就会得出 Elm 值像这样：`Person "Tom" 42`。
+
+如果真想融入解码器的精髓，我们可以用之前的定义将 `personDecoder` 定义为 `map2 Person nameDecoder ageDecoder`，就像这样，你总能用较小的构建模块构建出你自己的解码器。
+
+### 下一步
+
+这里的 `Json.Decoder` 没有涉及很多重要功能：
+
++ [`bool`](https://package.elm-lang.org/packages/elm/json/latest/Json-Decode#bool)：`Decoder Bool`
++ [`list`](https://package.elm-lang.org/packages/elm/json/latest/Json-Decode#list)：`Decoder a -> Decoder (List a)`
++ [`dict`](https://package.elm-lang.org/packages/elm/json/latest/Json-Decode#dict)：`Decoder a -> Decoder (Dict String a)`
++ [`oneOf`](https://package.elm-lang.org/packages/elm/json/latest/Json-Decode#oneOf)：`List (Decoder a) -> Decoder a`
+
+因此，还有很多方法可以提取各种数据结构。该 `oneOf` 函数对凌乱的 JSON 特别有用。（例如，有时你得到一个 `Int`，而其他时候你得到的是一个包含数字的 `String`，非常气人吧！）
+
+还要 `map3`，`map4` 和其他一些用来处理超过两个字段的对象。但当你开始处理较大的 JSON 对象时，值得一试 [`NoRedInk/elm-json-decode-pipeline`](https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest)。那里的类型会有些不同，但人们发现它们更易于阅读和使用。
+
+> 有趣的事实：我听过很多关于人们从 JS 切换到 Elm 时在服务器代码中发现错误的故事。人们编写的解码器最终会在验证阶段起作用，将 JSON 值中的异常捕获。因此，当 NoRedInk 从 React 切换到 Elm 时，他们发现了 Ruby 代码中的几个错误。
+
+## 随机
+
+到目前为止我们只见了发出 HTTP 请求的命令，但我们可以发起其他的命令，例如生成随机数！接下来让我们来做一个掷骰子的应用，可以产生一个介于 1 到 6 之间的随机数。
+
+我们需要用到 [`elm/random`](https://package.elm-lang.org/packages/elm/random/latest) 包，主要是其中的 [`Random`](https://package.elm-lang.org/packages/elm/random/latest/Random) 模块，具体代码如下：
+
+```elm
+import Browser
+import Html exposing (..)
+import Html.Events exposing (..)
+import Random
+
+
+
+-- MAIN
+
+
+main =
+  Browser.element
+    { init = init
+    , update = update
+    , subscriptions = subscriptions
+    , view = view
+    }
+
+
+
+-- MODEL
+
+
+type alias Model =
+  { dieFace : Int
+  }
+
+
+init : () -> (Model, Cmd Msg)
+init _ =
+  ( Model 1
+  , Cmd.none
+  )
+
+
+
+-- UPDATE
+
+
+type Msg
+  = Roll
+  | NewFace Int
+
+
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model =
+  case msg of
+    Roll ->
+      ( model
+      , Random.generate NewFace (Random.int 1 6)
+      )
+
+    NewFace newFace ->
+      ( Model newFace
+      , Cmd.none
+      )
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  Sub.none
+
+
+
+-- VIEW
+
+
+view : Model -> Html Msg
+view model =
+  div []
+    [ h1 [] [ text (String.fromInt model.dieFace) ]
+    , button [ onClick Roll ] [ text "Roll" ]
+    ]
+```
+
+这里新增的是在 `update` 函数中发出的命令：
+
+```elm
+Random.generate NewFace (Random.int 1 6)
+```
+
+Elm 的随机数生成方式与 JavaScript，Python，Java 等语言不同，让我们来具体看一下。
+
+### 随机生成器
+
+核心思想是我们有一个随机的生成器，用来描述如何生成一个随机值，比如：
+
+```elm
+import Random
+
+probability : Random.Generator Float
+probability =
+  Random.float 0 1
+
+roll : Random.Generator Int
+roll =
+  Random.int 1 6
+
+usuallyTrue : Random.Generator Bool
+usuallyTrue =
+  Random.weighted (80, True) [ (20, False) ]
+```
+
+这里面有三个随机数生成器，其中 `roll` 生成 `Int`，具体说是生成 1 到 6 之间的正整数，同样，`usuallyTrue` 会生成一个 `Bool`，80% 概率生成正确的结果。
+
+关键我们现在还没有实际生成值，我们只是描述了如何生成它们，接下来我们可以用 [`Random.generate`](https://package.elm-lang.org/packages/elm/random/latest/Random#generate) 将其转换为命令：
+
+```elm
+generate : (a -> msg) -> Generator a -> Cmd msg
+```
+
+执行命令时，该 `Generator` 会产生一些值，然后将值转换为一条 `Msg` 传递给 `update` 函数。所以，在我们的示例中，`Generator` 产生了一个介于 1 到 6 的值，然后它变成一条类似于 `NewFace 1` 或 `NewFace 4` 的消息。这就是我们制作掷骰子所需的所有知识了，但生成器还能做更多的事情！
+
+### 组合生成器
+
+一旦我们有了类似 `probability` 和 `usuallyTrue` 这样的简单生成器，我们就可以用像 `map3` 这样的函数将他们组合在一起使用。假设我们要制作一个简单的老虎机，我们可以这样创建一个生成器：
+
+```elm
+import Random
+
+type Symbol = Cherry | Seven | Bar | Grapes
+
+symbol : Random.Generator Symbol
+symbol =
+  Random.uniform Cherry [ Seven, Bar, Grapes ]
+
+type alias Spin =
+  { one : Symbol
+  , two : Symbol
+  , three : Symbol
+  }
+
+spin : Random.Generator Spin
+spin =
+  Random.map3 Spin symbol symbol symbol
+```
+
+首先我们创建 `Symbol` 来描述可以出现在老虎机上的图片，然后我们创建一个随机生成器，以相等的概率生成每个符号。
+
+接着我们用 `map3` 将它们组合成一个新的 `spin` 生成器，也就是说先生成三个 `Symbol`，然后将它们一起放入 `Spin`。
+
+这里的重点是，我们可以使用小型的构建模块构建处理非常复杂行为的 `Generator`，而对于我们的应用来说，我们只需使用 `Random.generate NewSpin spin` 生成下一个随机值。
+
+> 练习：以下是一些能让示例更有意思的想法。
+> 
+> + 与其显示数字，不如将骰子的正面显示为图像。
+> + 与其显示骰子正面图像，不如自己用 [elm/svg](https://package.elm-lang.org/packages/elm/svg/latest/) 把它画出来。
+> + 用 [Random.weighted](https://package.elm-lang.org/packages/elm/random/latest/Random#weighted) 创建一个加权的骰子。
+> + 多加一个骰子，然后让两个骰子同时滚动。
+> + 让骰子在最终值确定之前随机翻转。
+
+## 时间
+
+前往[在线编辑器示例](https://elm-lang.org/examples/time)
+
+现在我们要制作一个时钟。
