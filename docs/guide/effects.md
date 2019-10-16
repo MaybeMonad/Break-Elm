@@ -688,3 +688,155 @@ spin =
 前往[在线编辑器示例](https://elm-lang.org/examples/time)
 
 现在我们要制作一个时钟。
+
+到目前为止我们主要讨论*命令*，在 HTTP 请求和随机数的例子中，我们命令 Elm **立即执行**特定的任务，但这对于时钟来说有点不适用，我们希望随时获得最新的时间，这也就是**订阅**存在的意义。
+
+先浏览一遍以下的代码，稍后我们就来讨论如何使用 [`elm/time`](https://package.elm-lang.org/packages/elm/time/latest/)：
+
+```elm
+import Browser
+import Html exposing (..)
+import Task
+import Time
+
+
+
+-- MAIN
+
+
+main =
+  Browser.element
+    { init = init
+    , view = view
+    , update = update
+    , subscriptions = subscriptions
+    }
+
+
+
+-- MODEL
+
+
+type alias Model =
+  { zone : Time.Zone
+  , time : Time.Posix
+  }
+
+
+init : () -> (Model, Cmd Msg)
+init _ =
+  ( Model Time.utc (Time.millisToPosix 0)
+  , Task.perform AdjustTimeZone Time.here
+  )
+
+
+
+-- UPDATE
+
+
+type Msg
+  = Tick Time.Posix
+  | AdjustTimeZone Time.Zone
+
+
+
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model =
+  case msg of
+    Tick newTime ->
+      ( { model | time = newTime }
+      , Cmd.none
+      )
+
+    AdjustTimeZone newZone ->
+      ( { model | zone = newZone }
+      , Cmd.none
+      )
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  Time.every 1000 Tick
+
+
+
+-- VIEW
+
+
+view : Model -> Html Msg
+view model =
+  let
+    hour   = String.fromInt (Time.toHour   model.zone model.time)
+    minute = String.fromInt (Time.toMinute model.zone model.time)
+    second = String.fromInt (Time.toSecond model.zone model.time)
+  in
+  h1 [] [ text (hour ++ ":" ++ minute ++ ":" ++ second) ]
+```
+
+### `Time.Posix` 和 `Time.Zone`
+
+要想在程序中成功使用时间，我们需要理解三个概念：
+
++ **人工时间** - 这是你在时钟（上午 8 点）或日历（5 月 3 日）上看到的内容。如果我的手机显示的是波士顿的早晨 8 点，那我在温哥华的朋友现在看到的是几点？如果此时东京是早上 8 点，那纽约是否在同一天？当然不是！因此，在政治边界不断变化和[夏令时](https://en.wikipedia.org/wiki/Daylight_saving_time)使用不一致的[时区](https://en.wikipedia.org/wiki/Time_zone)之间，人工时间就不应该存储在你的 `Model` 或者数据库中，仅可用于显示。
++ **POSIX 时间** - 如果使用 POSIX 时间，可以无视你住在哪里或是在一年中的某个时间，它只是从某个时刻（1970年）以来经过的秒数。因而无论你在地球上的任何地方，POSIX 时间都是相同的。
++ **时区** - “时区”就是一堆能让你将 POSIX 时间转换为人类时间的数据，这不仅仅是 `UTC-7` 或 `UTC+3`，时区可比简单的偏移复杂多了。每次[佛罗里达州永久性地转换为 DST](https://www.npr.org/sections/thetwo-way/2018/03/08/591925587/) 或[萨摩亚从 UTC-11 转换为 UTC+13](https://en.wikipedia.org/wiki/Time_in_Samoa) 时，一些倒霉的家伙就得向 [IANA 时区数据库](https://en.wikipedia.org/wiki/IANA_time_zone_database)添加注释。该数据库会被加载到每台计算机上，而借助 POSIX 时间和数据库中所有极端情况，我们可以算出人工时间！
+
+因此，要向外界展示时间，你必须了解 `Time.Posix` 和 `Time.Zone`。而人工时间自然就不能放到 `Model` 中，而应直接显示在 `view` 中：
+
+```elm
+view : Model -> Html Msg
+view model =
+  let
+    hour   = String.fromInt (Time.toHour   model.zone model.time)
+    minute = String.fromInt (Time.toMinute model.zone model.time)
+    second = String.fromInt (Time.toSecond model.zone model.time)
+  in
+  h1 [] [ text (hour ++ ":" ++ minute ++ ":" ++ second) ]
+```
+
+[`Time.toHour`](https://package.elm-lang.org/packages/elm/time/latest/Time#toHour) 函数接收 `Time.Posix` 和 `Time.Zone` 两个参数，然后返回一个 0 到 23 之间的整数，表明你所在时区的小时。
+
+[`elm/time`](https://package.elm-lang.org/packages/elm/time/latest/) 的说明文档中还有很多关于如何处理时间的信息，务必在其他“时间操作”前先阅读一遍！尤其当你要使用计划表、日历等时。
+
+### `subscriptions`
+
+那我们如何获得 `Time.Posix`？用**订阅**！
+
+```elm
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  Time.every 1000 Tick
+```
+
+这里我们用到了 [`Time.every`](https://package.elm-lang.org/packages/elm/time/latest/Time#every) 函数：
+
+```elm
+every : Float -> (Time.Posix -> msg) -> Sub msg
+```
+
+它接收两个参数：
+
+1. 时间间隔（以毫秒为单位）。我们所说的 1000 就是 1 秒，所以可以用 60 * 1000 表示 1 分钟或以 5 * 60 * 1000 表示 5 分钟。
+2. 将当前时间转换为一个 `Msg`。因此，当前时间每一秒都会变成 `Tick <time>`，然后传给 `update`。
+
+这就是订阅的基本模式。
+
+### `Task.perform`
+
+获取 `Time.Zone` 有点棘手，我们可以使用以下的命令创建一个命令：
+
+```elm
+Task.perform AdjustTimeZone Time.here
+```
+
+前往阅读 [`Task`](https://package.elm-lang.org/packages/elm/core/latest/Task) 来理解这一行的意思，在这里我们只需理解运行它会给我们时区就可以了。
+
+> 练习：
+> 
+> + 给时钟增加一个暂停按钮，可以将 `Time.every` 订阅关闭。
+> + 让数字时钟看起来更好看，可以尝试添加一些 `style` 属性。
+> + 使用 [`elm/svg`](https://package.elm-lang.org/packages/elm/svg/latest/) 使模拟时钟能有一个红色指针。

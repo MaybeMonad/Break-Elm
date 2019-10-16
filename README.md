@@ -10,7 +10,7 @@
 | The Elm Architecture | ✅ | [Elm 架构](/docs/guide/the-elm-architecture.md) | 2019.09.28 |
 | Types | ✅ | [类型](/docs/guide/types.md) | 2019.10.10 |
 | Error Handling | ✅ | [错误处理](/docs/guide/error-handling.md) | 2019.10.12 |
-| Commands and Subscriptions | 👨🏻‍💻 |  |  |
+| Commands and Subscriptions | ✅ | [命令和订阅](/docs/guide/effects.md) | 2019.10.16 |
 | JavaScript Interop | 👨🏻‍💻 |  |  |
 | Web Apps | 👨🏻‍💻 |  |  |
 | Optimization | 👨🏻‍💻 |  |  |
