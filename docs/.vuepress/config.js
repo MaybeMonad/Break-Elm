@@ -1,6 +1,6 @@
 module.exports = {
-  title: 'Elm 中文手册',
-  description: 'Just playing around',
+  title: '🚀 Break Elm',
+  description: '揭开 Elm 的面纱，开始前端飞行之旅！',
   themeConfig: {
     nav: [
       { text: '首页', link: '/' },
@@ -51,6 +51,11 @@ module.exports = {
       {
         title: '命令和订阅',
         path: '/guide/effects',
+        collapsable: false,
+      },
+      {
+        title: 'JavaScript 交互',
+        path: '/guide/interop',
         collapsable: false,
       },
     ],
