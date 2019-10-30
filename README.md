@@ -1,4 +1,4 @@
-# Elm 中文使用手册
+# Break Elm | Elm 中文指南
 
 作为函数式编程范式的拥趸，在学习 Elm 的过程中，发现了诸多乐趣，为了更好的学习，制作了这一中文版，目前还在逐章翻译，如有错误，欢迎提 [Issue](https://github.com/DezineLeo/elm-lang-docs-zh/issues)。
 
@@ -11,7 +11,7 @@
 | Types | ✅ | [类型](/docs/guide/types.md) | 2019.10.10 |
 | Error Handling | ✅ | [错误处理](/docs/guide/error-handling.md) | 2019.10.12 |
 | Commands and Subscriptions | ✅ | [命令和订阅](/docs/guide/effects.md) | 2019.10.16 |
-| JavaScript Interop | 👨🏻‍💻 |  |  |
+| JavaScript Interop | ✅ | [命令和订阅](/docs/guide/interop.md) | 2019.10.30 |
 | Web Apps | 👨🏻‍💻 |  |  |
 | Optimization | 👨🏻‍💻 |  |  |
 | Next Steps | 👨🏻‍💻 |  |  |
