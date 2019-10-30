@@ -13,7 +13,7 @@
 | Types | ✅ | [类型](/guide/types) | 2019.10.10 |
 | Error Handling | ✅ | [错误处理](/guide/error-handling.md) | 2019.10.12 |
 | Commands and Subscriptions | ✅ | [命令和订阅](/guide/effects.md) | 2019.10.16 |
-| JavaScript Interop | ✅ | [命令和订阅](/guide/interop.md) | 2019.10.30 |
+| JavaScript Interop | ✅ | [JavaScript 交互](/guide/interop.md) | 2019.10.30 |
 | Web Apps | 👨🏻‍💻 |  |  |
 | Optimization | 👨🏻‍💻 |  |  |
 | Next Steps | 👨🏻‍💻 |  |  |
