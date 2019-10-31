@@ -58,6 +58,11 @@ module.exports = {
         path: '/guide/interop',
         collapsable: false,
       },
+      {
+        title: '网络应用',
+        path: '/guide/webapps',
+        collapsable: false,
+      },
     ],
     sidebarDepth: 1,
   },
