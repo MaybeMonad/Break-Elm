@@ -2,7 +2,7 @@
 
 # 关于 Elm 中文指南
 
-作为函数式编程范式的拥趸，在学习 Elm 的过程中，发现了诸多乐趣，为了更好的学习，制作了这一中文版，目前还在逐章翻译，如有错误，欢迎提 [Issue](https://github.com/DezineLeo/elm-lang-docs-zh/issues)。
+作为函数式编程范式的拥趸，在学习 Elm 的过程中，发现了诸多乐趣，为了更好的学习，制作了这一中文版，目前还在逐章翻译（在保证内容正确的前提下，对部分感叹、口语化的内容作删减、改编），如有错误，欢迎提 [Issue](https://github.com/DezineLeo/elm-lang-docs-zh/issues)。
 
 | 章节 | 翻译进度 | Link | 完成日期 |
 |:----|:--------|:-----|:-------|
@@ -23,6 +23,7 @@
 
 + [Learn Elm](https://github.com/dwyl/learn-elm)
 + [Beginning Elm](https://elmprogramming.com/)
++ [我是如何学习 Elm 的？](https://dezineleo.com/how-i-learn-elm-programming-language)
 
 ## 关于我
 

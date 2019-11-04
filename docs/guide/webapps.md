@@ -65,3 +65,158 @@ elm make src/Main.elm --output=main.js
 无论用哪种方式，你现在已经可以将一些 HTML 发送给浏览器了。你可以将这些 HTML 免费部署到 [GitHub Pages](https://pages.github.com/) 或 [Netlify](https://www.netlify.com/)。
 
 > **注意**：若要使用 CSS 自定义样式，你可以在 Elm 中使用 [`rtfeldman/elm-css`](https://package.elm-lang.org/packages/rtfeldman/elm-css/latest/)，但如果你在一个团队中工作，也许正在用着 CSS 预处理器，那你就只能在 HTML 中加载最终的 CSS 文档。
+
+## 解析 URL
+
+在实际的 Web 应用中，我们希望针对不同 URL 显示不同内容：
+
++ `/search`
++ `/search?q=seiza`
++ `/settings`
+
+那我们该怎么做呢？我们可以使用 `elm/url` 将原始字符串解析为 Elm 数据结构，接下来我们看几个示例。
+
+### 示例 1
+
+假设我们有一个艺术网站，其中以下地址为有效地址：
+
++ `/topic/architecture`
++ `/topic/painting`
++ `/topic/sculpture`
++ `/topic/42`
++ `/topic/123`
++ `/topic/451`
++ `/topic/tom`
++ `/topic/sue`
++ `/topic/sue/comment/11`
++ `/topic/sue/comment/51`
+
+由此，我们应有话题页、博客文章页、用户信息页及查找单个用户评论的方法。我们将使用 [`Url.Parser`](https://package.elm-lang.org/packages/elm/url/latest/Url-Parser) 模块来编写如下的 URL 解析器：
+
+```elm
+import Url.Parser exposing (Parser, (</>), int, map, oneOf, s, string)
+
+type Route
+  = Topic String
+  | Blog Int
+  | User String
+  | Comment String Int
+
+routeParser : Parser (Route -> a) a
+routeParser =
+  oneOf
+    [ map Topic   (s "topic" </> string)
+    , map Blog    (s "blog" </> int)
+    , map User    (s "user" </> string)
+    , map Comment (s "user" </> string </> s "comment" </> int)
+    ]
+
+-- /topic/pottery        ==>  Just (Topic "pottery")
+-- /topic/collage        ==>  Just (Topic "collage")
+-- /topic/               ==>  Nothing
+
+-- /blog/42              ==>  Just (Blog 42)
+-- /blog/123             ==>  Just (Blog 123)
+-- /blog/mosaic          ==>  Nothing
+
+-- /user/tom/            ==>  Just (User "tom")
+-- /user/sue/            ==>  Just (User "sue")
+-- /user/bob/comment/42  ==>  Just (Comment "bob" 42)
+-- /user/sam/comment/35  ==>  Just (Comment "sam" 35)
+-- /user/sam/comment/    ==>  Nothing
+-- /user/                ==>  Nothing
+```
+
+该 `Url.Parser` 模块非常简洁地将有效的 URL 地址转换为 Elm 数据！
+
+### 示例 2
+
+假设我们现在有一个个人博客，其中以下网址是为有效：
+
++ `/blog/12/the-history-of-chairs`
++ `/blog/13/the-endless-september`
++ `/blog/14/whale-facts`
++ `/blog/`
++ `/blog?q=whales`
++ `/blog?q=seiza`
+
+在这种情况下，我们要有单独的博客文章页和带有可查询参数的博客概述列表页，这次我们需要添加 [`Url.Parser.Query`](https://package.elm-lang.org/packages/elm/url/latest/Url-Parser-Query) 模块来编写我们的解析器：
+
+```elm
+import Url.Parser exposing (Parser, (</>), (<?>), int, map, oneOf, s, string)
+import Url.Parser.Query as Query
+
+type Route
+  = BlogPost Int String
+  | BlogQuery (Maybe String)
+
+routeParser : Parser (Route -> a) a
+routeParser =
+  oneOf
+    [ map BlogPost  (s "blog" </> int </> string)
+    , map BlogQuery (s "blog" <?> Query.string "q")
+    ]
+
+-- /blog/14/whale-facts  ==>  Just (BlogPost 14 "whale-facts")
+-- /blog/14              ==>  Nothing
+-- /blog/whale-facts     ==>  Nothing
+-- /blog/                ==>  Just (BlogQuery Nothing)
+-- /blog                 ==>  Just (BlogQuery Nothing)
+-- /blog?q=chabudai      ==>  Just (BlogQuery (Just "chabudai"))
+-- /blog/?q=whales       ==>  Just (BlogQuery (Just "whales"))
+-- /blog/?query=whales   ==>  Just (BlogQuery Nothing)
+```
+
+运算符 `</>` 和 `<?>` 让我们能像编写真实 URL 地址那样编写解析器，而通过添加 `Url.Parser.Query` 可以处理类似 `?q=seiza` 的查询参数。
+
+### 示例 3
+
+OK，我们现在有一个说明文档网站，它包含以下地址：
+
++ `/Basics`
++ `/Maybe`
++ `/List`
++ `/List#map`
++ `/List#filter`
++ `/List#foldl`
+
+我们可以使用 `Url.Parser` 中的 [`fragment`](https://package.elm-lang.org/packages/elm/url/latest/Url-Parser#fragment) 来处理这些地址，如下：
+
+```elm
+type alias Docs =
+  (String, Maybe String)
+
+docsParser : Parser (Docs -> a) a
+docsParser =
+  map Tuple.pair (string </> fragment identity)
+
+-- /Basics     ==>  Just ("Basics", Nothing)
+-- /Maybe      ==>  Just ("Maybe", Nothing)
+-- /List       ==>  Just ("List", Nothing)
+-- /List#map   ==>  Just ("List", Just "map")
+-- /List#      ==>  Just ("List", Just "")
+-- /List/map   ==>  Nothing
+-- /           ==>  Nothing
+```
+
+所以现在我们就可以处理 URL 片段了。
+
+### 综述
+
+现在我们已经见过了一些解析器，接下来我们看看如何将其融入 `Browser.application` 程序中。除了像之前那样仅是保存网址外，我们是否可以将其解析为有用的数据并将它展示出来呢？
+
+```
+TODO
+```
+
+主要的新内容：
+
+1. 当我们接收到一个新的 `UrlChanged` 消息，`update` 函数就解析 URL 地址。
+2. `view` 函数针对不同地址展示不容内容。
+
+所以也没什么特别的！
+
+但如果你拥有 10 个、20 个，甚至 100 个不同的页面时，会发生什么？所有内容都在这一个 `view` 中吗？当然不！那该怎么区分？下一节我们继续讨论这个问题。
+
+## 模块
+
