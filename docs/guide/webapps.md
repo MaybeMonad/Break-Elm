@@ -220,3 +220,69 @@ TODO
 
 ## 模块
 
+Elm 提供了一些**模块**来帮助你更好地扩展代码库。模块能让你以最小单位将代码分成多个文件。
+
+### 定义模块
+
+最佳实践是围绕核心类型定义 Elm 模块，就像 `List` 模块与 `List` 类型有关。因此，假设我们要围绕博客网站的 `Post` 类型构建一个模块，可以这样创建：
+
+```elm
+module Post exposing (Post, estimatedReadTime, encode, decoder)
+
+import Json.Decode as D
+import Json.Encode as E
+
+
+-- POST
+
+type alias Post =
+  { title : String
+  , author : String
+  , content : String
+  }
+
+
+-- READ TIME
+
+estimatedReadTime : Post -> Float
+estimatedReadTime post =
+  toFloat (wordCount post) / 220
+
+wordCount : Post -> Int
+wordCount post =
+  List.length (String.words post.content)
+
+
+-- JSON
+
+encode : Post -> E.Value
+encode post =
+  E.object
+    [ ("title", E.string post.title)
+    , ("author", E.string post.author)
+    , ("content", E.string post.content)
+    ]
+
+decoder : D.Decoder Post
+decoder =
+  D.map3 Post
+    (D.field "title" D.string)
+    (D.field "author" D.string)
+    (D.field "content" D.string)
+```
+
+此处唯一的新语法是顶行的 `module Post exposing (..)`，意思是称为 `Post` 的模块只提供部分值供外界使用。也就是说，`wordCount` 函数只在 `Post` 模块里使用。像这样隐藏函数的功能是 Elm 中最重要的技术之一。
+
+> 注意：如果你忘记添加模块声明，Elm 会使用以下替代：
+> ```elm
+> module Main exposing (..)
+> ```
+> 这对初学者非常友好，毕竟没必要一开始就面对模块系统！
+
+### 模块扩展
+
+当你的应用程序变得越来越复杂，你最终会选择使用模块。就像我在 [《The Life of a File》](https://youtu.be/XpDsk374LDE) 所述，Elm 模块通常在 400 到 1000 行内，但如果你有多个模块，如何决定在哪里添加新代码？
+
+我会采用以下的探索法：
+
++ **独有的** - 如果逻辑只出现一个地方，
