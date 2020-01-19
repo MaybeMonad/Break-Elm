@@ -66,7 +66,197 @@ elm make src/Main.elm --output=main.js
 
 > **注意**：若要使用 CSS 自定义样式，你可以在 Elm 中使用 [`rtfeldman/elm-css`](https://package.elm-lang.org/packages/rtfeldman/elm-css/latest/)，但如果你在一个团队中工作，也许正在用着 CSS 预处理器，那你就只能在 HTML 中加载最终的 CSS 文档。
 
-## 解析 URL
+## 导航
+
+之前我们都只讨论单个网页，但如果我们想要建立像 `package.elm-lang.org` 这样包含 [search](https://package.elm-lang.org/)、[README](https://package.elm-lang.org/packages/elm/core/latest/)、[docs](https://package.elm-lang.org/packages/elm/core/latest/Maybe) 等页面的网站，该如何做到呢？
+
+### 多页
+
+最简单的方法是创建不同的 HTML，即通过跳转不同路径渲染不同 HTML 页面。在 Elm 0.19 之前的 Elm 包管理网站就是这么做的，但它有一些缺点：
+
+1. **空白屏** - 每次在加载新的 HTML 时，屏幕都会变白，我们是否能做个更好的过渡？
+2. **冗余请求** - 每个软件包都有一个 docs.json 文件，在每次访问诸如 `String` 或模块时就会被加载，我们是否能以某种方式让这些数据在页面间共享？
+3. **冗余代码** - 主页和文档页用到了很多相同函数，如 `Html.text` 和 `Html.div`，我们是否能让这些代码在页面间共享？
+
+方法很简单，就是只加载一次 HTML，只是在处理 URL 更改时有些棘手。
+
+### 单页
+
+除了使用 `Browser.element` 或 `Browser.document` 创建程序外，我们还可以创建一个 [`Browser.application`](https://package.elm-lang.org/packages/elm/browser/latest/Browser#application) 来避免 URL 更改时加载新的 HTML：
+
+```elm
+application :
+  { init : flags -> Url -> Key -> ( model, Cmd msg )
+  , view : model -> Document msg
+  , update : msg -> model -> ( model, Cmd msg )
+  , subscriptions : model -> Sub msg
+  , onUrlRequest : UrlRequest -> msg
+  , onUrlChange : Url -> msg
+  }
+  -> Program flags model msg
+```
+
+它能在三个重要的场景下扩展 `Browser.document` 的功能。
+
+**当程序启动时**，`init` 会从浏览器导航栏获取当前 `Url`，这能让你根据不同的 `Url` 显示不同的内容。
+
+**当某人单击某个链接时**，例如 `<a href="/home">Home</a>`，该链接会被拦截为 `UrlRequest`。因此，相对于加载新的 HTML，`onUrlRequest` 会创建一条消息并传递给 `update`，然后你就可以自行决定下一步要做什么。你可以保存当前滚动位置，保留相关数据，甚至更改 URL 等。
+
+**网址更改后**，新的 `Url` 会传递给 `onUrlChange`，结果消息会进入 `update`，然后你就可以决定如何显示新页面。
+
+因此，这三个添加项可以使你完全控制 URL 的更改，而不再是加载新的 HTML，接下来让我们看个示例。
+
+### 示例
+
+我们从 `Browser.application` 基础程序开始，它仅用于跟踪当前 URL。快速浏览一遍代码你就会发现有意思的部分都在 `update` 中，之后我们会详细讲解这些细节：
+
+```elm
+import Browser
+import Browser.Navigation as Nav
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Url
+
+
+
+-- MAIN
+
+
+main : Program () Model Msg
+main =
+  Browser.application
+    { init = init
+    , view = view
+    , update = update
+    , subscriptions = subscriptions
+    , onUrlChange = UrlChanged
+    , onUrlRequest = LinkClicked
+    }
+
+
+
+-- MODEL
+
+
+type alias Model =
+  { key : Nav.Key
+  , url : Url.Url
+  }
+
+
+init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init flags url key =
+  ( Model key url, Cmd.none )
+
+
+
+-- UPDATE
+
+
+
+type Msg
+  = LinkClicked Browser.UrlRequest
+  | UrlChanged Url.Url
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+  case msg of
+    LinkClicked urlRequest ->
+      case urlRequest of
+        Browser.Internal url ->
+          ( model, Nav.pushUrl model.key (Url.toString url) )
+
+        Browser.External href ->
+          ( model, Nav.load href )
+
+    UrlChanged url ->
+      ( { model | url = url }
+      , Cmd.none
+      )
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+  Sub.none
+
+
+
+-- VIEW
+
+
+view : Model -> Browser.Document Msg
+view model =
+  { title = "URL Interceptor"
+  , body =
+      [ text "The current URL is: "
+      , b [] [ text (Url.toString model.url) ]
+      , ul []
+          [ viewLink "/home"
+          , viewLink "/profile"
+          , viewLink "/reviews/the-century-of-the-self"
+          , viewLink "/reviews/public-opinion"
+          , viewLink "/reviews/shah-of-shahs"
+          ]
+      ]
+  }
+
+
+viewLink : String -> Html msg
+viewLink path =
+  li [] [ a [ href path ] [ text path ] ]
+```
+
+该 `update` 函数可以处理 `LinkClicked` 和 `UrlChanged` 消息，`LinkClicked` 中有很多新东西，我们先来仔细看看。
+
+#### `UrlRequest`
+
+每当有人点击像 `<a href="/home">/home</a>` 这样的链接时，它都会产生一个 `UrlRequest` 值：
+
+```elm
+type UrlRequest
+  = Internal Url.Url
+  | External String
+```
+
+该 `Internal` 适用于停留在同一域上的任何链接。所以，如果你正在浏览是 `https://example.com`，内部链接包括如 `settings#privacy`，`/home`，`https://example.com/home`，`//example.com/home` 等。
+
+该 `External` 适用于可跳转到其他域的任何链接。像 `https://elm-lang.org/examples`，`https://static.example.com`，`http://example.com/home` 这样的链接都是指向不同域。另外需要注意的是如果把协议从 `https` 改为 `http` 也意味着不同域。
+
+无论按下哪个链接，我们的示例程序都会创建一个 `LinkClicked` 消息并将其发送给 `update` 函数，这也是我们将要讨论的重点。
+
+### `LinkClicked`
+
+我们的大部分 `update` 逻辑都在决定如何处理这些 `UrlRequest` 值：
+
+```elm
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+  case msg of
+    LinkClicked urlRequest ->
+      case urlRequest of
+        Browser.Internal url ->
+          ( model, Nav.pushUrl model.key (Url.toString url) )
+
+        Browser.External href ->
+          ( model, Nav.load href )
+
+    UrlChanged url ->
+      ( { model | url = url }
+      , Cmd.none
+      )
+```
+
+这其中的 `Nav.load` 和 `Nav.pushUrl` 来自 [`Browser.Navigation`](https://package.elm-lang.org/packages/elm/browser/latest/Browser-Navigation) 模块，两者都是关于如何改变 URL，我们将经常用到这两个方法：
+
++ `load` 会载入所有新的 HTML，等效于在地址栏中输入 URL 后回车。所以在 `Model` 中发生的任何事都会被抛出，并加载新页面。
++ `pushUrl` 会改变 URL，但不会加载新的 HTML，
+
+## URL 解析
 
 在实际的 Web 应用中，我们希望针对不同 URL 显示不同内容：
 
@@ -285,4 +475,6 @@ decoder =
 
 我会采用以下的探索法：
 
-+ **独有的** - 如果逻辑只出现一个地方，
++ **独有的** - 如果逻辑只出现在一个地方，我会尽可能分解顶层辅助函数来匹配使用，也可能使用类似 `-- POST PREVIEW` 的注释头来表明以下定义与预览博文有关。
++ **相似** - 假设我们要在首页和作者页显示博文预览，其中在主页上，我们要强调有趣的内容，因此我们需要更长的片段，而在作者页面上，我们要强调内容的广度，因此我们更多体现标题。这些情况是相似的，但不是相同的，所以我们回到刚才**独有的**探索法，只需单独编写逻辑。
++ **相同** - 
